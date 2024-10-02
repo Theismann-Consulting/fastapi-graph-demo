@@ -1,10 +1,5 @@
 # Packages and functions for loading environment variables
 import os
-from dotenv import load_dotenv, find_dotenv
-
-# Load environment from disk first, then apply any defaults
-load_dotenv(find_dotenv('.env'))
-
 
 class Config:
     # Application password for superadmin functions (/auth/launch_user endpoint for first-time setup)

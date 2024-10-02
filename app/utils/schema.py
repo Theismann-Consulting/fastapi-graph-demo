@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-# Authorisation response models
+# Authorization response models
 class Token(BaseModel):
     access_token: str
     token_type: str

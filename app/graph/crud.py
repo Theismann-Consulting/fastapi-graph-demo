@@ -4,9 +4,9 @@ from typing import Optional
 # Import modules from FastAPI
 from fastapi import APIRouter, Depends, HTTPException, status
 
-# Import internal utilities for database access, authorisation, and schemas
+# Import internal utilities for database access, authorization, and schemas
 from app.utils.db import neo4j_driver
-from app.authorisation.auth import get_current_active_user
+from app.authorization.auth import get_current_active_user
 from app.utils.schema import User, Node, Nodes, Relationship
 
 # Set the API Router

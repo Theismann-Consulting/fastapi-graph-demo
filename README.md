@@ -5,7 +5,7 @@ February 2023
 
 ### **Table of Contents**
 - [**Getting Started**](#Getting-Started)
-- [**Authorisation & Security**](#Authorisation-and-Security)
+- [**Authorization & Security**](#Authorization-and-Security)
 - [**User Management**](#User-Management)
 - [**Graph Objects**](#Graph-Objects)
     - [Nodes & Relationships](#Nodes-&-Relationships)
@@ -51,7 +51,7 @@ Once created, you must authenticate using the built-in Authentication system of 
 
 <br>
 
-### **Authorisation and Security**
+### **Authorization and Security**
 This API is configured with Oauth2 password authentication flow. It uses FastAPI's Dependency Injection system to create this flow, so if you'd like a different one take a look at the FastAPI documentation on Security and/or Dependencies to modify it.
 
 There is also built-in encryption for user passwords, as well as some constraints on types of nodes or relationships and certain edits are not allowed (e.g., you cannot edit a user's password for the 'update_node' endpoint). There are lots of opportunities to expand the functionality on user access and permissions - particularly for traversing the graph - so **any ideas or suggestions are more than welcome**.

@@ -1,6 +1,7 @@
 # Import required base modules
 from datetime import datetime, timezone
 from typing import Optional
+import logging
 
 # Import modules from FastAPI
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,7 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 # Import internal utilities for database access, authorization, and schemas
 from app.utils.db import neo4j_driver
 from app.authorization.auth import get_current_active_user, create_password_hash
-from app.utils.schema import User
+from app.utils.schema import User, UserCreate, UserUpdate
+
+logger = logging.getLogger('uvicorn.error')
 
 # Set the API Router
 router = APIRouter()
@@ -34,17 +37,15 @@ async def read_user(username: str):
 
 # CREATE User
 @router.post("/create", response_model=User)
-async def create_user(username: str, password: str,
-                      full_name: Optional[str] = None,
-                      disabled: Optional[bool] = None):
+async def create_user(user: UserCreate):
 
     # Create dictionary of new user attributes
     attributes = {
-        'username': username,
-        'full_name': full_name,
-        'hashed_password': create_password_hash(password),
+        'username': user.username,
+        'full_name': user.full_name,
+        'hashed_password': create_password_hash(user.password),
         'joined': str(datetime.now(timezone.utc)),
-        'disabled': disabled,
+        'disabled': user.disabled,
     }
 
     # Write Cypher query and run against the database
@@ -53,13 +54,13 @@ async def create_user(username: str, password: str,
 
     with neo4j_driver.session() as session:
         # First, run a search of users to determine if username is already in use
-        check_users = session.run(query=cypher_search, parameters={'username': username})
+        check_users = session.run(query=cypher_search, parameters={'username': user.username})
 
         # Return error message if username is already in the database
         if check_users.data():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Operation not permitted, user with username {username} already exists.",
+                detail=f"Operation not permitted, user with username {user.username} already exists.",
                 headers={"WWW-Authenticate": "Bearer"})
 
         response = session.run(query=cypher_create, parameters={'params': attributes})
@@ -69,19 +70,8 @@ async def create_user(username: str, password: str,
 
 # UPDATE User profile
 @router.put('/{username}/update', response_model=User)
-async def update_user(attributes: dict, username: str):
-    # Add check to stop call if password is being changed
-    for k in attributes:
-        if k == 'hashed_password':
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Operation not permitted, cannot update password with this method.",
-                headers={"WWW-Authenticate": "Bearer"})
-
-    if attributes:
-        unpacked_attributes = 'SET ' + ', '.join(f'user.{key}=\'{value}\'' for (key, value) in attributes.items())
-    else:
-        unpacked_attributes = ''
+async def update_user(user: UserUpdate, username):
+    unpacked_attributes = 'SET ' + ', '.join(f'user.{key}=\'{value}\'' for (key, value) in user.__dict__.items())
 
     # Execute Cypher query to update the user attributes
     cypher_update_user = ('MATCH (user: User) WHERE user.username = $user\n'
@@ -109,10 +99,10 @@ async def delete_user(username: str):
 
 # RESET User password
 @router.put('/me/reset_password', response_model=User)
-async def reset_password(new_password: str, current_user: User = Depends(get_current_active_user)):
+async def reset_password(user: UserUpdate, current_user: User = Depends(get_current_active_user)):
     # Get current user's username and encrypt new password
     username = current_user.username
-    new_password_hash = create_password_hash(new_password)
+    new_password_hash = create_password_hash(user.password)
 
     # Execute Cypher query to reset the hashed_password attribute
     cypher_reset_password = ('MATCH (user:User) WHERE user.username = $username\n'

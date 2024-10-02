@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import time
+import logging
 
 # FastAPI modules for authorization
 from fastapi import Depends, APIRouter, HTTPException, status
@@ -17,6 +18,7 @@ from app.utils.environment import Config
 from app.utils.db import neo4j_driver
 from app.utils.schema import Token, TokenData, User, UserInDB
 
+logger = logging.getLogger('uvicorn.error')
 
 # Set the API Router
 router = APIRouter()
@@ -41,6 +43,7 @@ def get_user(username: str):
     with neo4j_driver.session() as session:
         user_in_db = session.run(query)
         user_data = user_in_db.data()[0]['a']
+        logger.debug(f"User_data: {user_data}")
         return UserInDB(**user_data)
 
 

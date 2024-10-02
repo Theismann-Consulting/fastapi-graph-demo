@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
+import logging
 
 # Import modules from FastAPI
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.utils.db import neo4j_driver
 from app.authorization.auth import get_current_active_user
 from app.utils.schema import User, Node, Nodes, Relationship
+
+logger = logging.getLogger('uvicorn.error')
 
 # Set the API Router
 router = APIRouter()
@@ -111,7 +114,7 @@ async def read_node_id(node_id: int, current_user: User = Depends(get_current_ac
 
 # READ data about a collection of nodes in the graph
 @router.get('/read_node_collection', response_model=Nodes)
-async def read_nodes(search_node_property: str, node_property_value: str,
+async def read_nodes(search_node_property: Optional[str] = None, node_property_value: Optional[str] = None,
                      current_user: User = Depends(get_current_active_user)):
     """
     Retrieves data about a collection of nodes in the graph, based on node property.
@@ -122,12 +125,20 @@ async def read_nodes(search_node_property: str, node_property_value: str,
 
     :returns: Node response, with node id, labels, and properties. Returns only first response.
     """
-
-    cypher = f"""
-        MATCH (node)
-        WHERE node.{search_node_property} = '{node_property_value}'
-        RETURN ID(node) as id, LABELS(node) as labels, node')
-        """
+    logger.info(f"read_node_collection parameters: {search_node_property} | {node_property_value}")
+    if search_node_property == None or node_property_value == None:
+        cypher = f"""
+            MATCH (node)
+            RETURN ELEMENTID(node) as id, LABELS(node) as labels, node
+            """
+        logger.info(f"read_node_collection cypher: {cypher}")
+    else:
+        cypher = f"""
+            MATCH (node)
+            WHERE node.{search_node_property} = '{node_property_value}'
+            RETURN ELEMENTID(node) as id, LABELS(node) as labels, node
+            """
+        logger.info(f"read_node_collection cypher: {cypher}")
 
     with neo4j_driver.session() as session:
         result = session.run(query=cypher)
